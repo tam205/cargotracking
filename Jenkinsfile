@@ -5,42 +5,52 @@ pipeline {
         TF_VERSION = '1.5.0'  // Set Terraform version
         TF_WORKING_DIR = 'terraform'  // Set Terraform directory
     }
+    tools{
+        terraform 'Terraform'
+    }
 
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'master', credentialsId: 'tamashabyaombe@gmail.com', url: 'https://github.com/tam205/cargotracking.git'
+                git branch: 'master', credentialsId: 'your-jenkins-credential-id', url: 'https://github.com/tam205/cargotracking.git'
             }
         }
 
         stage('Install Terraform') {
             steps {
-                sh 'curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -'
-                sh 'sudo apt-add-repository --yes --update "deb [arch=amd64] https://releases.hashicorp.com/terraform/1.11.3/terraform_1.11.3_windows_amd64.zip"'
-                sh 'sudo apt-get install -y terraform=$TF_VERSION'
-            }
-        }
-
-        stage('Initialize Terraform') {
-            steps {
-                dir(TF_WORKING_DIR) {
-                    sh 'terraform init'
+                script {
+                    def isWindows = isUnix() == false
+                    if (isWindows) {
+                        bat 'choco install terraform --version=%TF_VERSION% -y'
+                    } else {
+                        sh 'curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -'
+                        sh 'sudo apt-add-repository --yes --update "deb [arch=amd64] https://releases.hashicorp.com/terraform/1.11.3/terraform_1.11.3_windows_amd64.zip"'
+                        sh 'sudo apt-get install -y terraform=$TF_VERSION'
+                    }
                 }
             }
         }
 
-        stage('Plan Terraform') {
+        stage('Terraform Init') {
             steps {
-                dir(TF_WORKING_DIR) {
-                    sh 'terraform plan -out=tfplan'
+                dir('terraform') {
+                    bat 'terraform init'
                 }
             }
         }
 
-        stage('Apply Terraform') {
+        stage('Terraform Plan') {
             steps {
-                dir(TF_WORKING_DIR) {
-                    sh 'terraform apply -auto-approve tfplan'
+                dir('terraform') {
+                    bat 'terraform plan'
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir('terraform') {
+                    bat 'terraform apply -auto-approve'
                 }
             }
         }
